@@ -212,18 +212,14 @@ def gen_databook_table(databook_input_file,databook_output_file,meta_info):
     template.close()
     return 0
     
-
+#Function to connect to the switches using ssh and send the commands.
+#The outputs are saved in a temporary files from which the excel tables are generated.
 def send_config_command(device_dict):
     start_msg = '===> {} Connection: {}'
     received_msg = '<=== {} Received:   {}'
     ip = device_dict["ip"]+" - "+device_dict["hostname"]
-    #ip = device_dict["ip"]
             
     logging.info(start_msg.format(datetime.now().time(), ip))
-    ##if ip == '192.168.100.1': time.sleep(5)
-    
-    
-    ###NEW PART
     
     network_node  = {'device_type':'cisco_ios', 
                     'ip':device_dict['ip'],
@@ -245,14 +241,12 @@ def send_config_command(device_dict):
             
             int_status_output = ssh.send_command('show int status')
             
-            #print(int_status_output)
             
             serial_num = ssh.send_command('show version | in System Serial|System serial')
             gebauede = ssh.send_command('show snmp location')
             
             output_vlans = ssh.send_command('show int trunk | beg allowed on trunk')
             
-            #pprint(output_vlans)
             
             get_vlans = re.compile(r'(?s) on trunk(.*?)(?:(?:\r*\n){2})')
             sw_vlans = get_vlans.findall(output_vlans)
@@ -261,8 +255,7 @@ def send_config_command(device_dict):
             get_interfaces = re.compile(r'([TeGi]{2}\d.\d.\d+).*?')
             interfaces_list = get_interfaces.findall(int_status_output)
             
-            #print(interfaces_list)
-            
+             
             file_dir_cdp = str(folder_name_cdp)
             
                          
@@ -272,8 +265,6 @@ def send_config_command(device_dict):
             for i in interfaces_list:
                 cdp_output = ssh.send_command("show cdp nei "+i+" | inc Ten|Gig")
                 int_status_output = ssh.send_command("show int "+i+" status | inc Te|Gi")
-                
-                #print(inventory_output)
                 
                 f_cdp = open(file_dir_cdp+"/"+host_name+"_DBOOK-INTF.txt","a+")
                 f_cdp.write(int_status_output)
