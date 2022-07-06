@@ -21,7 +21,8 @@ from openpyxl import load_workbook
 from operator import itemgetter
 
 
-
+#function reads the csv file of the devices lists
+# csv file hast the format : hostname;ip-address;site;username;password
 def read_map(device_list_file):
     
     map_data = {}
@@ -35,6 +36,8 @@ def read_map(device_list_file):
 
     return map_data           
 
+#function to generate the excel table of the devices. A sheet is generated for every switch
+# Table displays the output from "show int status " and "show cdp" and the vlans associated on the trunk ports.
 def gen_databook_table(databook_input_file,databook_output_file,meta_info):
     # Load the input file to a variable
     input_file = open(databook_input_file, encoding='utf-8')
@@ -52,19 +55,19 @@ def gen_databook_table(databook_input_file,databook_output_file,meta_info):
     re_table = textfsm.TextFSM(template)
     fsm_results = re_table.ParseText(raw_text_data)
     
-    #print(fsm_results)
+
       
     #Writing to excel file
-    #check If Workbook File Exists
+    #check If Workbook File Exists if not create a new one
     if os.path.exists(databook_output_file):
         wb = load_workbook(filename = databook_output_file)
     else:
-    #create a new Workbook
         wb = openpyxl.Workbook()
     
     if meta_info["hostname"] in wb.sheetnames:
         wb.remove(wb[meta_info["hostname"]])
     
+    #set the worksheet name to the hostname of the switch
     sheet = wb.create_sheet(title=meta_info["hostname"])
     
     sheet.cell(row=4,column=1).value = "Hostname : " 
@@ -196,9 +199,7 @@ def gen_databook_table(databook_input_file,databook_output_file,meta_info):
 				)
     
     sheet.merge_cells(cell_to_merge) 
-    #for x in range(last_row_num+3, last_row_num+7):
-    #    sheet.merge_cells(start_row=x, start_column=1, end_row=x, end_column=12)
-    
+     
     sheet.delete_cols(10,2)
     
     #Set Default FONT and Save Workbook
@@ -258,7 +259,6 @@ def send_config_command(device_dict):
             
             
             get_interfaces = re.compile(r'([TeGi]{2}\d.\d.\d+).*?')
-            #get_interfaces = re.compile(r'([TeGi]{2}\d.\d+).*?')
             interfaces_list = get_interfaces.findall(int_status_output)
             
             #print(interfaces_list)
@@ -296,10 +296,9 @@ def send_config_command(device_dict):
 
             return meta_data
     except Exception as err:        
-    #except (NetmikoTimeoutException, NetmikoAuthenticationException, ConfigInvalidException) as err:
         logging.warning(err)
 
-
+#function to create 10 threads passing the devices lists and the send_config_command.
 def send_command_to_devices(devices):
     data = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
@@ -308,10 +307,12 @@ def send_command_to_devices(devices):
         
         
 if __name__ == "__main__":
-
+ 
+    #set a time variable which will be used to generate the folders and files
     time_now = datetime.now()
     dt_string = time_now.strftime("%d-%m-%Y_%H")
 
+    #check the arguements passed to the script file
     try:
         dev_list_file = sys.argv[1]
     except:
@@ -323,15 +324,16 @@ if __name__ == "__main__":
         format = '%(threadName)s %(name)s %(levelname)s: %(message)s',
         level=logging.INFO)
     
+    #create Databook folder with the timestamp
+    # z.B DBOOK_STATUS_04-06-2022_11Uhr
     folder_name_cdp = "DBOOK_STATUS_"+dt_string+"Uhr"
-    #folder_name = "INVENTORY-"+str(date.today())+"-"+str(time.hour)
-    #print("Folder_name_cdp"+folder_name_cdp+"\n")
-    
+ 
+   #get the list of devices and their passwords
     map_return_values = read_map(dev_list_file)
     
     #print(map_return_values)
     
-    
+    #initialized the devices list
     device_list = []
     site_list = []
     
@@ -369,6 +371,7 @@ if __name__ == "__main__":
     
     info_msg = '== {} Generating Excel : {}'
     
+   #Begin generating the Excel files for the switches
     for device_ip in output_from_device:
         if os.path.exists(folder_name_cdp+"/"+device_ip['hostname']+"_DBOOK-INTF.txt"):
             logging.info(info_msg.format(datetime.now().time(), device_ip['hostname']))
